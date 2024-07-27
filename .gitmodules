@@ -1,0 +1,12 @@
+[submodule "Library/sol2"]
+	path = Library/sol2
+	url = https://github.com/ThePhD/sol2
+[submodule "Library/yaml-cpp"]
+	path = Library/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "Library/EURL"]
+	path = Library/EURL
+	url = https://github.com/NGLSG/EURL.git
+[submodule "Library/RyoCompression"]
+	path = Library/RyoCompression
+	url = https://github.com/NGLSG/RyoComression.git
