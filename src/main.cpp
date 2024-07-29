@@ -99,37 +99,45 @@ struct FixedRate {
     }
 };
 
-void Task(ScriptManager&sm, bool&running, FixedRate&fr, std::shared_ptr<ADBC::ADBClient> adbc) {
-    sm.Invokes("Awake");
-    sm.Invokes("Start", adbc);
+void Task(std::shared_ptr<Script>&script, bool&running, FixedRate&fr, std::shared_ptr<ADBC::ADBClient> adbc) {
+    script->Invoke("Awake");
+    script->Invoke("Start", adbc);
     while (running) {
-        sm.Invokes("Update", 1.f / fr.frequency);
+        script->Invoke("Update", 1.f / fr.frequency);
 
         std::this_thread::sleep_for(fr.interval);
     }
-    sm.Invokes("OnDestroy");
+    script->Invoke("OnDestroy");
 }
 
 
-int main() {
+int main(int argc, char** argv) {
     auto devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
     if (devices.empty()) {
         std::cout << "No device found" << std::endl;
         return 0;
     }
-    auto adbc = ADBC::ADBClient::Create(RC::Utils::File::PlatformPath("bin/platform-tools/adb"), devices[1]);
+    auto adbc = ADBC::ADBClient::Create(RC::Utils::File::PlatformPath("bin/platform-tools/adb"), devices[0]);
 
     ScriptManager sm;
 
-    sm.Adds(ScriptManager::Scan("scripts"));
+    sm.Adds(ScriptManager::Scan());
     sm.Initialize();
     bool running = true;
     FixedRate loop(60.0f);
-    ThreadWrapper t(Task, std::ref(sm), std::ref(running), std::ref(loop), adbc);
-    t.start();
-    while (running) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    adbc->startRecordingAct();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    auto ret = adbc->stopRecordingAct();
+    adbc->ReplayEvents(ret);
+    LoadManager::Save(ret, "test.yml");
+    /*UI ui;
+    ui.Initialize();
+    while (!glfwWindowShouldClose(ui.GetWindow())) {
+        ui.Render();
+        ui.Update();
     }
+    running = false;
+    ui.Shutdown();*/
 
     return 0;
 }

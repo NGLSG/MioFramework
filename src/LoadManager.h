@@ -15,15 +15,16 @@ namespace YAML {
             node["start"] = event.start;
             node["end"] = event.end;
             node["duration"] = event.end - event.start;
+            node["id"] = event.id;
             return node;
         }
 
         static bool decode(const Node&node, ADBC::AndroidEvent&event) {
             event.type = node["type"].as<std::string>();
-            event.points = node["points"].as<std::vector<ADBC::Point>>();
+            event.points = node["points"].as<std::vector<std::pair<float, ADBC::Point>>>();
             event.start = node["start"].as<float>();
             event.end = node["end"].as<float>();
-            event.duration = event.end - event.start;
+            event.id = node["id"].as<std::string>();
             return true;
         }
     };

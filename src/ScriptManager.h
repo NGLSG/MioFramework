@@ -46,11 +46,12 @@ public:
     template<typename... Args>
     void Invokes(ScriptFunctions funcs, Args&&... args);
 
-    static std::vector<std::string> Scan(std::string scriptsRoot);
+    static std::vector<std::string> Scan(std::string scriptsRoot = "scripts");
 
     ScriptFunctions GetFuncs(std::string funcName) const;
 
 private:
+    std::string scriptsRoot = "scripts";
     std::queue<std::string> scriptsQueue;
     std::vector<std::shared_ptr<Script>> scripts;
 };

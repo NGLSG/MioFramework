@@ -43,7 +43,7 @@ void ScriptManager::Delete(std::string scriptPath) {
 }
 
 std::shared_ptr<Script> ScriptManager::GetScript(std::string scriptPath) {
-    scriptPath = RC::Utils::File::PlatformPath(scriptPath);
+    scriptPath = RC::Utils::File::PlatformPath(scriptsRoot + "/" + scriptPath);
     for (auto&script: scripts) {
         if (script->scriptPath == scriptPath) {
             return script;
@@ -53,6 +53,7 @@ std::shared_ptr<Script> ScriptManager::GetScript(std::string scriptPath) {
 }
 
 std::vector<std::string> ScriptManager::Scan(std::string scriptsRoot) {
+    scriptsRoot = RC::Utils::File::PlatformPath(scriptsRoot);
     return RC::Utils::Directory::List(scriptsRoot);
 }
 

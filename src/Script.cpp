@@ -199,11 +199,6 @@ void Script::binding() {
                                   cv::waitKey(0);
                               }
     );
-    lua.new_usertype<ADBC::Point>("Point",
-                                  sol::constructors<ADBC::Point(float, float)>(),
-                                  "x", &ADBC::Point::x,
-                                  "y", &ADBC::Point::y
-    );
     auto IU = lua.create_table("ImageUtils");
     IU.set_function("Binary", [](const cv::Mat&src) {
         return ImageUtils::Binary(src);
@@ -219,6 +214,16 @@ void Script::binding() {
     IU.set_function("PrintScreen", [](std::shared_ptr<ADBC::ADBClient> adbc) {
         return ImageUtils::PrintScreen(adbc);
     });
+    lua.new_usertype<ADBC::Point>("Point",
+                                  sol::constructors<ADBC::Point(float, float)>(),
+                                  "x", &ADBC::Point::x,
+                                  "y", &ADBC::Point::y
+    );
+    lua.new_usertype<ADBC::AndroidEvent>("AndroidEvent",
+                                         "type", &ADBC::AndroidEvent::type,
+                                         "start", &ADBC::AndroidEvent::start,
+                                         "end", &ADBC::AndroidEvent::end
+    );
 
     lua.new_usertype<ADBC::ADBClient>("ADBClient",
                                       sol::constructors<ADBC::ADBClient(std::string, std::string)>(),
@@ -233,7 +238,9 @@ void Script::binding() {
                                       "setID", &ADBC::ADBClient::setID,
                                       "shell", &ADBC::ADBClient::shell,
                                       "swipe", &ADBC::ADBClient::swipe,
-                                      "tap", &ADBC::ADBClient::tap,
+                                      "tap", [](ADBC::ADBClient&client, ADBC::Point p, sol::optional<float> duration) {
+                                          return client.tap(p, duration.value_or(0));
+                                      },
                                       "text", &ADBC::ADBClient::text,
                                       "textUTF_8", &ADBC::ADBClient::textUTF_8,
                                       "inputKey", &ADBC::ADBClient::inputKey,
@@ -258,17 +265,11 @@ void Script::binding() {
                                           }
                                       )
     );
-    lua.new_usertype<ADBC::AndroidEvent>("AndroidEvent",
-                                         "type", &ADBC::AndroidEvent::type,
-                                         "points", &ADBC::AndroidEvent::points,
-                                         "start", &ADBC::AndroidEvent::start,
-                                         "end", &ADBC::AndroidEvent::end,
-                                         "duration", &ADBC::AndroidEvent::duration
-    );
+
     // 绑定 LoadManager 类的静态成员函数
     lua.set_function("Save", &LoadManager::Save<std::vector<ADBC::AndroidEvent>>);
     lua.set_function("Load", &LoadManager::Load<std::vector<ADBC::AndroidEvent>>);
-    lua.set_function("sleep", &RC::Utils::sleep);
+    lua.set_function("Sleep", &RC::Utils::sleep);
 }
 
 bool Script::loadScript() {

@@ -22,7 +22,7 @@ public:
     sol::protected_function getFunction(const std::string&funcName);
 
     template<typename... Args>
-    sol::object callFunction(const std::string&funcName, Args&&... args);
+    sol::object Invoke(const std::string&funcName, Args&&... args);
 
     bool checkFunc(const std::string&funcName);
 
@@ -41,7 +41,7 @@ private:
 };
 
 template<typename... Args>
-sol::object Script::callFunction(const std::string&funcName, Args&&... args) {
+sol::object Script::Invoke(const std::string&funcName, Args&&... args) {
     if (checkFunc(funcName)) {
         sol::protected_function func = lua[funcName];
         auto ret = func(std::forward<Args>(args)...);

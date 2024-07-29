@@ -10,3 +10,10 @@
 [submodule "Library/RyoCompression"]
 	path = Library/RyoCompression
 	url = https://github.com/NGLSG/RyoComression.git
+[submodule "Library/ImGUI"]
+	path = Library/ImGUI
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
+[submodule "Library/glfw"]
+	path = Library/glfw
+	url = https://github.com/glfw/glfw.git

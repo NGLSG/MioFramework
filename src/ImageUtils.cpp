@@ -1,4 +1,7 @@
 #include "ImageUtils.h"
+
+#include <backends/imgui_impl_opengl3_loader.h>
+
 #include "utils.h"
 using namespace RC;
 
@@ -8,17 +11,10 @@ cv::Mat ImageUtils::PrintScreen(std::shared_ptr<ADBC::ADBClient> adbc) {
         return cv::imread("assets/screenshot.png");
     }
     std::cout << "Error: Screenshot not found" << std::endl;
-    return cv::Mat();
+    return {};
 }
 
 cv::Mat ImageUtils::Binary(cv::Mat src) {
-    cv::Mat dst;
-    cv::cvtColor(src, dst, cv::COLOR_BGR2GRAY);
-    cv::threshold(dst, dst, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    return dst;
-}
-
-cv::Mat ImageUtils::Threshold(cv::Mat src) {
     cv::Mat dst;
     cv::cvtColor(src, dst, cv::COLOR_BGR2GRAY);
     cv::threshold(dst, dst, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
@@ -55,6 +51,26 @@ ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std
     }
 
     return point;
+}
+
+GLuint ImageUtils::LoadTexture(const char* filename) {
+    int width, height, channels;
+    unsigned char* data = stbi_load(filename, &width, &height, &channels, 0);
+    if (!data) {
+        std::cerr << "Failed to load image: " << filename << std::endl;
+        return 0;
+    }
+
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    stbi_image_free(data);
+    return texture_id;
 }
 
 ADBC::Point ImageUtils::Find(const std::string&srcPath, const std::string&templatePath,
