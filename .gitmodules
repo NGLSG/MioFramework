@@ -1,19 +1,9 @@
 [submodule "Library/sol2"]
 	path = Library/sol2
 	url = https://github.com/ThePhD/sol2
-[submodule "Library/yaml-cpp"]
-	path = Library/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
 [submodule "Library/EURL"]
 	path = Library/EURL
 	url = https://github.com/NGLSG/EURL.git
 [submodule "Library/RyoCompression"]
 	path = Library/RyoCompression
 	url = https://github.com/NGLSG/RyoComression.git
-[submodule "Library/ImGUI"]
-	path = Library/ImGUI
-	url = https://github.com/ocornut/imgui.git
-	branch = docking
-[submodule "Library/glfw"]
-	path = Library/glfw
-	url = https://github.com/glfw/glfw.git

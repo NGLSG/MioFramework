@@ -11,6 +11,7 @@ find_package(OpenCV CONFIG REQUIRED)
 
 
 add_subdirectory(ADBClient)
+add_subdirectory(MUI)
 add_subdirectory(Library)
 file(GLOB src
         src/*.c*
@@ -24,6 +25,8 @@ if (MSVC)
 endif ()
 
 include_directories(${OpenCV_INCLUDE_DIRS} ADBClient)
-add_executable(MioFramework ${src} ${header})
-target_include_directories(MioFramework PRIVATE ${LUA_INCLUDE_DIR})
-target_link_libraries(MioFramework PRIVATE eurl adbc RyoCompress ${OpenCV_LIBS} ${LUA_LIBRARIES} sol2::sol2 yaml-cpp::yaml-cpp ImGui glfw)
+add_library(MioFramework STATIC ${src} ${header})
+target_include_directories(MioFramework PUBLIC ${LUA_INCLUDE_DIR})
+target_link_libraries(MioFramework PUBLIC eurl adbc RyoCompress ImNodeEditor ImGui glfw EnTT::EnTT ${OpenCV_LIBS} ${LUA_LIBRARIES} sol2::sol2 yaml-cpp::yaml-cpp)
+
+target_link_libraries(MUI PRIVATE  MioFramework)

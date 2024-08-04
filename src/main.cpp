@@ -2,8 +2,12 @@
 
 #include "ScriptManager.h"
 #include <yaml-cpp/yaml.h>
-
+#include <chrono>
 #include "LoadManager.h"
+#include "../MUI/GUIManifest.h"
+#include "../MUI/UI.h"
+#include "../MUI/Components/Event.h"
+
 #ifdef _WIN32
 #define ADB_LINK "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
 #define suffix ".exe"
@@ -112,6 +116,11 @@ void Task(std::shared_ptr<Script>&script, bool&running, FixedRate&fr, std::share
 
 
 int main(int argc, char** argv) {
+    /*if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
+        std::cout << "Downloading adb" << std::endl;
+        EURL::eurl::Download(ADB_LINK, RC::Utils::File::PlatformPath("bin.zip").c_str());
+        RC::Compression::Extract("bin.zip", "bin");
+    }
     auto devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
     if (devices.empty()) {
         std::cout << "No device found" << std::endl;
@@ -122,22 +131,31 @@ int main(int argc, char** argv) {
     ScriptManager sm;
 
     sm.Adds(ScriptManager::Scan());
-    sm.Initialize();
+    sm.Initialize();*/
     bool running = true;
-    FixedRate loop(60.0f);
-    adbc->startRecordingAct();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    auto ret = adbc->stopRecordingAct();
-    adbc->ReplayEvents(ret);
-    LoadManager::Save(ret, "test.yml");
-    /*UI ui;
+
+    Mio::UI ui;
     ui.Initialize();
-    while (!glfwWindowShouldClose(ui.GetWindow())) {
-        ui.Render();
+    ImVec4 clear = {0.45f, 0.55f, 0.60f, 1.00f};
+    Mio::Event::Declare("SetColEditorActive");
+    auto manifest = Mio::ResourceManager::LoadManifest("Test");
+    auto colEditor = manifest->GetUIByName<Mio::ColorPicker>("colorPicker1");
+    colEditor->GetData().v = &clear;
+    auto style = colEditor->style.GetStyle();
+    //style.Alpha = 0.5f;
+    colEditor->style.Modify(style);
+    Mio::Event::Modify("SetColEditorActive", [&]() {
+        colEditor->SetActive(!colEditor->ActiveSelf());
+    });
+    Mio::ResourceManager::SaveManifest(manifest);
+    ui.AddManifest(manifest);
+
+    while (!ui.ShouldClose()) {
+        ui.SetClearColor(clear);
         ui.Update();
     }
     running = false;
-    ui.Shutdown();*/
+    ui.Shutdown();
 
     return 0;
 }
