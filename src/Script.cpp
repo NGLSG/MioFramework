@@ -1,6 +1,7 @@
 #include "Script.h"
 
 #include "LoadManager.h"
+#include "../MUI/ResourceManager.h"
 
 Script::Script() {
     scriptPath = "";

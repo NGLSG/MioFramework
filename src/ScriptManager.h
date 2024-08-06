@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "Script.h"
+#include "../MUI/ResourceManager.h"
 
 struct ScriptFunctions {
     using iterator = std::vector<sol::protected_function>::iterator;
@@ -61,7 +62,7 @@ public:
     ScriptFunctions GetFuncs(std::string funcName) const;
 
 private:
-    std::string scriptsRoot = "scripts";
+    std::string scriptsRoot = RESOURCING("scripts");
     std::queue<std::string> scriptsQueue;
     std::vector<std::shared_ptr<Script>> scripts;
 };

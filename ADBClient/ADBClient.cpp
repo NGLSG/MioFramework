@@ -8,7 +8,6 @@
 #include <unordered_set>
 #include <cmath>
 #include "../src/ThreadPool.h"
-#define MULTI_TOUCH_FINGER
 
 namespace ADBC {
     std::string Execute(std::string executable, std::string args) {
@@ -74,7 +73,7 @@ namespace ADBC {
     std::string ADBClient::textUTF_8(const std::string&command) {
         if (!checkPackage("com.android.adbkeyboard")) {
             std::cout << "Please install ADB Keyboard" << std::endl;
-            install("assets/apk.apk");
+            install("Resources/assets/apk.apk");
         }
         if (shell("settings get secure default_input_method").find("com.android.adbkeyboard/.AdbIME") ==
             std::string::npos) {

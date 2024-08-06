@@ -119,79 +119,6 @@ void Task(std::shared_ptr<Script>&script, bool&running, FixedRate&fr, std::share
     script->Invoke("OnDestroy");
 }
 
-void PackResources(const std::string&packageFilePath, const std::vector<std::string>&resourcePaths) {
-    std::ofstream packageFile(packageFilePath, std::ios::binary);
-    if (!packageFile) {
-        std::cerr << "Unable to open package file for writing." << std::endl;
-        return;
-    }
-
-    std::vector<Mio::ResourceIndex> metadataList;
-
-    for (const auto&resourcePath: resourcePaths) {
-        std::ifstream resourceStream(resourcePath, std::ios::binary);
-        if (!resourceStream) {
-            std::cerr << "Unable to open resource file: " << resourcePath << std::endl;
-            continue;
-        }
-
-        std::vector<char> resourceData(std::istreambuf_iterator<char>(resourceStream), {});
-        resourceStream.close();
-
-        packageFile.write(resourceData.data(), resourceData.size());
-
-        Mio::ResourceIndex metadata;
-        metadata.name = resourcePath;
-        metadata.offset = packageFile.tellp();
-        metadata.size = resourceData.size();
-        metadataList.push_back(metadata);
-    }
-
-    for (const auto&metadata: metadataList) {
-        packageFile.write((char *)(&metadata), sizeof(Mio::ResourceIndex));
-    }
-
-    packageFile.close();
-}
-
-void UnpackResources(const std::string&packageFilePath) {
-    std::ifstream packageFile(packageFilePath, std::ios::binary);
-    if (!packageFile) {
-        std::cerr << "Unable to open package file for reading." << std::endl;
-        return;
-    }
-
-    // 首先跳到文件末尾，确定元数据的总数
-    packageFile.seekg(0, std::ios::end);
-    size_t metadataSize = packageFile.tellg() % sizeof(Mio::ResourceIndex) == 0
-                              ? packageFile.tellg() / sizeof(Mio::ResourceIndex)
-                              : 0;
-    packageFile.seekg(0, std::ios::end);
-
-    std::vector<Mio::ResourceIndex> metadataList;
-    for (size_t i = 0; i < metadataSize; ++i) {
-        Mio::ResourceIndex metadata;
-        packageFile.seekg(-(static_cast<long>(sizeof(Mio::ResourceIndex)) * (i + 1)), std::ios::end);
-        packageFile.read(reinterpret_cast<char *>(&metadata), sizeof(Mio::ResourceIndex));
-        metadataList.push_back(metadata);
-    }
-
-    // 然后根据元数据提取每个资源
-    for (const auto&metadata: metadataList) {
-        packageFile.seekg(metadata.offset);
-        std::ofstream resourceFile(metadata.name, std::ios::binary);
-        if (!resourceFile) {
-            std::cerr << "Unable to create or open resource file: " << metadata.name << std::endl;
-            continue;
-        }
-
-        resourceFile.write((char *)packageFile.rdbuf(), metadata.size);
-        resourceFile.close();
-    }
-
-    packageFile.close();
-}
-
 int main(int argc, char** argv) {
     /*if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
         std::cout << "Downloading adb" << std::endl;
@@ -213,21 +140,7 @@ int main(int argc, char** argv) {
 
     Mio::Application app("Mio Framework", "");
     app.Initialize();
-    std::vector<std::string> resourcePaths = {
-        "imgui.ini",
-        "assets/font/font.TTF",
-        "assets/apk.apk",
-
-    };
-    // 打包资源到单个文件
-    PackResources("resources.package", resourcePaths);
-    auto [key, iv] = Encryption::GenerateKeyAndIV(256, 128);
-    Encryption::AES::Encrypt("resources.package", key, iv, "resources.package.encrypted");
-    Encryption::AES::Decrypt("resources.package.encrypted", key, iv, "resources.package.decrypted");
-
-
-    auto manifest = Mio::GUIManifest::Create("Main");
-    manifest->SavePath = "Scenes/Main";
+    auto manifest = Mio::GUIManifest::Create("Main", (ResourcePath / "Scenes").string());
     app.AddManifest(manifest);
     ImVec4 clear = {0.f, 0.f, 0.f, 1.f};
     Mio::ResourceManager::SaveManifest(manifest);
@@ -237,6 +150,6 @@ int main(int argc, char** argv) {
     }
     running = false;
     app.Shutdown();
-
+    Mio::Resource.Pack();
     return 0;
 }

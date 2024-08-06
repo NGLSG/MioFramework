@@ -4,6 +4,3 @@
 [submodule "Library/EURL"]
 	path = Library/EURL
 	url = https://github.com/NGLSG/EURL.git
-[submodule "Library/RyoCompression"]
-	path = Library/RyoCompression
-	url = https://github.com/NGLSG/RyoComression.git
