@@ -5,6 +5,16 @@
 #include "Script.h"
 
 struct ScriptFunctions {
+    using iterator = std::vector<sol::protected_function>::iterator;
+
+    iterator begin() {
+        return funcs.begin();
+    }
+
+    iterator end() {
+        return funcs.end();
+    }
+
     template<typename T, typename... Args>
     std::vector<T> Invokes(Args&&... args);
 
@@ -80,7 +90,7 @@ template<typename T, typename... Args>
 std::vector<T> ScriptManager::Invokes(std::string funcName, Args&&... args) {
     std::vector<T> results;
     for (auto&script: scripts) {
-        results.push_back(script->callFunction(funcName, std::forward<Args>(args)...));
+        results.push_back(script->Invoke(funcName, std::forward<Args>(args)...));
     }
     return results;
 }
@@ -108,7 +118,7 @@ void ScriptManager::Invokes(ScriptFunctions funcs, Args&&... args) {
 template<typename... Args>
 void ScriptManager::Invokes(std::string funcName, Args&&... args) {
     for (auto&script: scripts) {
-        script->callFunction(funcName, std::forward<Args>(args)...);
+        script->Invoke(funcName, std::forward<Args>(args)...);
     }
 }
 

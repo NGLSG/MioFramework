@@ -37,13 +37,11 @@ ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std
         point.x = cvPoint.x + templateImage.cols / 2; // 计算矩形中心的x坐标
         point.y = cvPoint.y + templateImage.rows / 2; // 计算矩形中心的y坐标
 
-        // 在源图像上绘制匹配点
         cv::rectangle(src, cv::Point(cvPoint.x, cvPoint.y),
                       cv::Point(cvPoint.x + templateImage.cols, cvPoint.y + templateImage.rows),
                       cv::Scalar(0, 255, 0), 2);
     }
 
-    // 保存结果图像到指定路径
     if (!outputPath.empty()) {
         cv::imwrite(outputPath, src);
     }

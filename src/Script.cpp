@@ -19,6 +19,7 @@ bool Script::Initialize(std::string scriptsPath) {
     if (!loadScript()) {
         return false;
     }
+    return true;
 }
 
 sol::protected_function Script::getFunction(const std::string&funcName) {
@@ -82,9 +83,8 @@ void Script::binding() {
                                     "Date", &GeneralHeader::Date
     );
 
-    // 绑定 RequestHeader 结构体
     lua.new_usertype<RequestHeader>("RequestHeader",
-                                    sol::constructors<RequestHeader()>(), // 添加构造函数绑定
+                                    sol::constructors<RequestHeader()>(),
                                     "ContentType", &RequestHeader::ContentType,
                                     "UserAgent", &RequestHeader::UserAgent,
                                     "Authorization", &RequestHeader::Authorization,
@@ -94,9 +94,8 @@ void Script::binding() {
                                     sol::base_classes, sol::bases<GeneralHeader>()
     );
 
-    // 绑定 ResponseHeader 结构体
     lua.new_usertype<ResponseHeader>("ResponseHeader",
-                                     sol::constructors<ResponseHeader()>(), // 添加构造函数绑定
+                                     sol::constructors<ResponseHeader()>(),
                                      "ContentType", &ResponseHeader::ContentType,
                                      "ContentLength", &ResponseHeader::ContentLength,
                                      "Server", &ResponseHeader::Server,
@@ -112,9 +111,8 @@ void Script::binding() {
                                      sol::base_classes, sol::bases<GeneralHeader>()
     );
 
-    // 绑定 EntityHeader 结构体
     lua.new_usertype<EntityHeader>("EntityHeader",
-                                   sol::constructors<EntityHeader()>(), // 添加构造函数绑定
+                                   sol::constructors<EntityHeader()>(),
                                    "ContentType", &EntityHeader::ContentType,
                                    "ContentLength", &EntityHeader::ContentLength,
                                    "ContentEncoding", &EntityHeader::ContentEncoding
@@ -151,32 +149,39 @@ void Script::binding() {
     });
     lua.set("eurl", Eurl);
     auto Compression = lua.create_table("Compression");
-    Compression.set_function("List", [](const std::string&file, sol::optional<std::string> pwd) {
-        return RC::Compression::List(file, pwd.value_or(""));
-    });
+    Compression.set_function(
+        "List", [](const std::string&file, sol::optional<const RC::Type> type, sol::optional<std::string> pwd) {
+            return RC::Compression::List(file, type.value_or(RC::Count), pwd.value_or(""));
+        });
 
     Compression.set_function(
-        "Extract", [](const std::string&file, const std::string&dest, sol::optional<std::string> pwd) {
-            return RC::Compression::Extract(file, dest, pwd.value_or(""));
+        "Extract", [](const std::string&file, const std::string&dest, sol::optional<const RC::Type> type,
+                      sol::optional<std::string> pwd) {
+            return RC::Compression::Extract(file, dest, type.value_or(RC::Count), pwd.value_or(""));
         });
 
     Compression.set_function("ExtractSelectedFile", [](const std::string&filePath, const std::string&selectedFile,
-                                                       const std::string&outputPath,
+                                                       const std::string&outputPath, sol::optional<const RC::Type> type,
                                                        sol::optional<std::string> pwd) {
-        return RC::Compression::ExtractSelectedFile(filePath, selectedFile, outputPath, pwd.value_or(""));
+        return RC::Compression::ExtractSelectedFile(filePath, selectedFile, outputPath, type.value_or(RC::Count),
+                                                    pwd.value_or(""));
     });
 
     Compression.set_function("Compress", [](const std::string&filePath, const std::string&outputPath,
+                                            sol::optional<const RC::Type> type,
                                             sol::optional<int> level,
                                             sol::optional<std::string> password, sol::optional<long> split) {
-        return RC::Compression::Compress(filePath, outputPath, level.value_or(1), password.value_or(""),
+        return RC::Compression::Compress(filePath, outputPath, type.value_or(RC::Count), level.value_or(1),
+                                         password.value_or(""),
                                          split.value_or(1));
     });
 
     Compression.set_function("MergeParts",
                              [](const std::string&outputZipPath, sol::optional<std::string> destPath,
+                                sol::optional<const RC::Type> type,
                                 sol::optional<std::string> pwd) {
                                  return RC::Compression::MergeParts(outputZipPath, destPath.value_or(""),
+                                                                    type.value_or(RC::Count),
                                                                     pwd.value_or(""));
                              });
     lua.set("Compression", Compression);
@@ -266,7 +271,6 @@ void Script::binding() {
                                       )
     );
 
-    // 绑定 LoadManager 类的静态成员函数
     lua.set_function("Save", &LoadManager::Save<std::vector<ADBC::AndroidEvent>>);
     lua.set_function("Load", &LoadManager::Load<std::vector<ADBC::AndroidEvent>>);
     lua.set_function("Sleep", &RC::Utils::sleep);
@@ -297,7 +301,7 @@ void Script::buildPackagePath(const std::string&rootPath) {
 
     std::string rootLuaPath = RC::Utils::File::AbsolutePath(RC::Utils::File::PlatformPath(rootPath + "/?.lua"));
     package_path += ";" + rootLuaPath;
-    // 递归遍历目录，构建包路径
+
     for (const auto&entry: std::filesystem::recursive_directory_iterator(rootPath)) {
         if (entry.is_directory()) {
             std::string dirPath = entry.path().string();

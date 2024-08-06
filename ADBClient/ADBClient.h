@@ -25,6 +25,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <memory>
 
 
 namespace ADBC {
@@ -172,20 +173,16 @@ namespace ADBC {
         static float Rho(const std::vector<std::pair<float, Point>>&);
 
         static int HexToDec(std::string hexString) {
-            // 去除字符串中的空格
             std::string trimmedHexString = hexString;
-            trimmedHexString.erase(std::remove(trimmedHexString.begin(), trimmedHexString.end(), ' '),
-                                   trimmedHexString.end());
+            std::erase(trimmedHexString, ' ');
 
             try {
                 int decimalValue = std::stoi(trimmedHexString, nullptr, 16);
                 return decimalValue;
             }
             catch (const std::invalid_argument&e) {
-                // 如果输入字符串不是有效的16进制格式，抛出异常
                 throw std::invalid_argument("Invalid hexadecimal string");
             } catch (const std::out_of_range&e) {
-                // 如果转换结果超出了 int 的范围，抛出异常
                 throw std::out_of_range("Hexadecimal value out of range for int");
             }
         }

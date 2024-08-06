@@ -21,12 +21,13 @@ file(GLOB header
 )
 
 if (MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /utf-8")
 endif ()
-
+add_definitions(-DBORINGSSL_IMPLEMENTATION)
+add_definitions(-DNOCRYPT)
 include_directories(${OpenCV_INCLUDE_DIRS} ADBClient)
 add_library(MioFramework STATIC ${src} ${header})
 target_include_directories(MioFramework PUBLIC ${LUA_INCLUDE_DIR})
 target_link_libraries(MioFramework PUBLIC eurl adbc RyoCompress ImNodeEditor ImGui glfw EnTT::EnTT ${OpenCV_LIBS} ${LUA_LIBRARIES} sol2::sol2 yaml-cpp::yaml-cpp)
 
-target_link_libraries(MUI PRIVATE  MioFramework)
+target_link_libraries(MUI PRIVATE MioFramework)

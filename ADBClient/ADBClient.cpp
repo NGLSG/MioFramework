@@ -6,7 +6,7 @@
 #include <future>
 #include <numeric>
 #include <unordered_set>
-
+#include <cmath>
 #include "../src/ThreadPool.h"
 #define MULTI_TOUCH_FINGER
 
@@ -92,8 +92,6 @@ namespace ADBC {
     }
 
     std::string ADBClient::swipe(const Point start, const Point end, const float duration) const {
-        // 使用 std::round 对坐标进行四舍五入
-
         const int durationInMs = static_cast<int>(std::round(duration * 1000));
 
         return shell(
@@ -247,15 +245,12 @@ namespace ADBC {
 
                     std::vector<std::future<void>> futures;
                     for (auto&task: tasks) {
-                        // 使用std::async启动异步任务
                         auto future = std::async(std::launch::async, [this, &task]() {
-                            // 执行滑动任务
                             swipe(task.p1, task.p2, task.duration);
                         });
                         futures.push_back(std::move(future));
                     }
 
-                    // 等待所有任务完成
                     for (auto&future: futures) {
                         future.wait();
                     }
@@ -445,15 +440,12 @@ namespace ADBC {
     std::vector<std::pair<float, Point>> ADBClient::Optimize(const std::vector<std::pair<float, Point>>&points) {
         std::vector<std::pair<float, Point>> optimized;
 
-        // 检查点集是否有足够的点
         if (points.size() < 2) {
             return points;
         }
 
-        // 始终添加起点
         optimized.push_back(points[0]);
 
-        // 查找极值点
         for (size_t i = 1; i < points.size() - 1; ++i) {
             if (points[i].second.y >= points[i - 1].second.y && points[i].second.y >= points[i + 1].second.y) {
                 optimized.push_back(points[i]);
@@ -463,7 +455,6 @@ namespace ADBC {
             }
         }
 
-        // 始终添加终点
         optimized.push_back(points.back());
 
         return optimized;
