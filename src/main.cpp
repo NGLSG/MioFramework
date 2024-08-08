@@ -196,22 +196,17 @@ int main(int argc, char** argv) {
     else
         tasks = {};
     std::vector<AndroidEvent> ret;
-
+    //Resource.UnpackAll();
     ScriptManager sm;
 
     FixedRate fr(60);
     sm.Adds(ScriptManager::Scan());
     sm.Initialize();
-    std::atomic<bool> Packing = false;
-    auto pack = [&]() {
-        Packing = true;
-        Resource.Pack();
-        Packing = false;
-    };
-    std::thread packingThread;
+
     Application app("Mio Framework", "");
     app.Initialize();
     auto manifest = ResourceManager::LoadManifest((ResourcePath / "Scenes/Main").string());
+    //auto manifest = GUIManifest::Create("Main", (ResourcePath / "Scenes").string());
     app.AddManifest(manifest);
     auto window = manifest->GetUI<Window>("Main");
     auto DevicesBox = manifest->GetUI<ListBox>("Devices");
@@ -225,12 +220,10 @@ int main(int argc, char** argv) {
     auto search = manifest->GetUI<InputText>("SearchInputText");
     auto runningList = manifest->GetUI<ListBox>("RunningList");
     auto console = manifest->GetUI<Console>("ConsoleLog");
-
     for (auto&task: tasks) {
         for (auto&it: task->Replays)
             RecoringList->GetData().items.push_back(it.first);
     }
-
     std::vector<std::string> scripts;
     Event::Modify("SearchScripts", [&] {
         for (auto&it: scripts) {
@@ -272,15 +265,25 @@ int main(int argc, char** argv) {
         devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
         DevicesBox->GetData().items = devices;
     });
-    std::thread RecoringThread;
     Event::Modify("BtnRecord", [&]() {
-        auto task = AutomationTask::Create();
         if (DevicesBox->GetData().items.empty()) {
             window3->SetActive(true);
             WarningText->GetData().text = "暂无可用设备";
             console->AddLog({"目前没有可用设备", Console::LogData::LogWarning});
             return;
         }
+        std::shared_ptr<AutomationTask> task;
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+
+        if (item != tasks.end()) {
+            task = *item;
+            tasks.erase(item);
+        }
+        else
+            task = AutomationTask::Create();
         *task->Device = DevicesBox->GetSelectedItem();
         task->state = AutomationTask::State::Recording;
         task->RecordingThread = std::thread([task,adbc,console]() {
@@ -341,6 +344,7 @@ int main(int argc, char** argv) {
                                     Console::LogData::LogInfo
                                 });
                                 item->get()->state = AutomationTask::State::Idle;
+                                break;
                             }
                         }
                     }
@@ -406,6 +410,7 @@ int main(int argc, char** argv) {
         }
     });
 
+
     ImVec4 clear = {0.f, 0.f, 0.f, 1.f};
 
     while (!app.ShouldClose()) {
@@ -419,11 +424,26 @@ int main(int argc, char** argv) {
         app.Update();
     }
 
+    std::atomic<bool> Packing = true;
+    auto pack = [&]() {
+        Packing = true;
+        Resource.Pack();
+        Packing = false;
+    };
+    std::thread packingThread;
+    packingThread = std::thread([&] {
+        pack();
+    });
+    packingThread.detach();
+    while (Packing) {
+        RC::Utils::sleep(500);
+    }
     DevicesBox->GetData().items.clear();
     RecoringList->GetData().items.clear();
     scriptsList->GetData().items.clear();
     runningList->GetData().items.clear();
     LoadManager::Save(tasks, "events.yml");
+    //RC::Utils::Directory::Remove("Resources");
     app.Shutdown();
     ResourceManager::SaveManifest(manifest);
     return 0;
