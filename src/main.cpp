@@ -183,6 +183,10 @@ struct YAML::convert<std::shared_ptr<AutomationTask>> {
 };
 
 int main(int argc, char** argv) {
+    Resource.UnpackAll();
+    if (!RC::Utils::Directory::Exists("assets")) {
+        RC::Utils::Directory::Create("assets");
+    }
     if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
         std::cout << "Downloading adb" << std::endl;
         EURL::eurl::Download(ADB_LINK, RC::Utils::File::PlatformPath("bin.zip").c_str());
@@ -198,6 +202,7 @@ int main(int argc, char** argv) {
     std::vector<AndroidEvent> ret;
     //Resource.UnpackAll();
     ScriptManager sm;
+
 
     FixedRate fr(60);
     sm.Adds(ScriptManager::Scan());
@@ -237,7 +242,7 @@ int main(int argc, char** argv) {
         scriptsList->GetData().items.clear();
         scripts.clear();
         for (auto&it: ScriptManager::Scan()) {
-            scriptsList->GetData().items.push_back(it);
+            scriptsList->GetData().items.push_back(RC::Utils::File::FileName(it));
             scripts.push_back(it);
         }
     });

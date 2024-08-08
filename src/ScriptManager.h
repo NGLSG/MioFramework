@@ -32,7 +32,11 @@ private:
 
 class ScriptManager {
 public:
-    ScriptManager() = default;
+    ScriptManager() {
+        if (!RC::Utils::Directory::Exists(scriptsRoot)) {
+            RC::Utils::Directory::Create(scriptsRoot);
+        }
+    }
 
     void Add(std::string scriptPath);
 
