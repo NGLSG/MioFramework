@@ -24,6 +24,7 @@
 #define suffix ""
 #endif
 using namespace ADBC;
+using namespace Mio;
 
 size_t streamStrEg(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t newLength = size * nmemb;
@@ -108,48 +109,322 @@ struct FixedRate {
     }
 };
 
-void Task(std::shared_ptr<Script>&script, bool&running, FixedRate&fr, std::shared_ptr<ADBC::ADBClient> adbc) {
+struct AutomationTask {
+    enum State {
+        Recording,
+        Awaking,
+        Starting,
+        Updating,
+        Stopping,
+        Idle,
+    };
+
+    static std::string stateToString(State state) {
+        switch (state) {
+            case Recording: return "Recording";
+            case Awaking: return "Awaking";
+            case Starting: return "Starting";
+            case Updating: return "Updating";
+            case Stopping: return "Stopping";
+            case Idle: return "Idle";
+            default: return "Unknown";
+        }
+    }
+
+    std::shared_ptr<std::string> Device = std::make_shared<std::string>("");
+    std::shared_ptr<std::string> RunningScript = std::make_shared<std::string>("");
+    std::map<std::string, std::vector<AndroidEvent>> Replays;
+    std::atomic<bool> running;
+    std::thread ScriptThread;
+    std::thread RecordingThread;
+    std::atomic<State> state;
+
+    static std::shared_ptr<AutomationTask> Create() {
+        return std::make_shared<AutomationTask>();
+    }
+};
+
+void Task(std::shared_ptr<Script>&script, std::atomic<bool>&running, FixedRate&fr,
+          std::shared_ptr<ADBC::ADBClient> adbc, std::atomic<AutomationTask::State>&state) {
+    state = AutomationTask::Awaking;
     script->Invoke("Awake");
+    state = AutomationTask::Starting;
     script->Invoke("Start", adbc);
+    state = AutomationTask::Updating;
     while (running) {
         script->Invoke("Update", 1.f / fr.frequency);
 
         std::this_thread::sleep_for(fr.interval);
     }
+    state = AutomationTask::Stopping;
     script->Invoke("OnDestroy");
 }
 
+template<>
+struct YAML::convert<std::shared_ptr<AutomationTask>> {
+    static Node encode(const std::shared_ptr<AutomationTask>&rhs) {
+        Node node;
+        node["Device"] = *rhs->Device;
+        node["Replays"] = rhs->Replays;
+        return node;
+    }
+
+    static bool decode(const Node&node, std::shared_ptr<AutomationTask>&rhs) {
+        if (!node.IsMap())
+            return false;
+        rhs = AutomationTask::Create();
+        *rhs->Device = node["Device"].as<std::string>();
+        if (!node["Replays"].IsDefined() && !node["Replays"].IsNull())
+            rhs->Replays = {};
+        else
+            rhs->Replays = node["Replays"].as<std::map<std::string, std::vector<AndroidEvent>>>();
+        return true;
+    }
+};
+
 int main(int argc, char** argv) {
-    /*if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
+    if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
         std::cout << "Downloading adb" << std::endl;
         EURL::eurl::Download(ADB_LINK, RC::Utils::File::PlatformPath("bin.zip").c_str());
         RC::Compression::Extract("bin.zip", "bin");
     }
-    auto devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
-    if (devices.empty()) {
-        std::cout << "No device found" << std::endl;
-        return 0;
-    }
-    auto adbc = ADBC::ADBClient::Create(RC::Utils::File::PlatformPath("bin/platform-tools/adb"), devices[0]);
+    auto devices = ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
+    auto adbc = ADBClient::Create(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
+    std::vector<std::shared_ptr<AutomationTask>> tasks;
+    if (RC::Utils::File::Exists("events.yml"))
+        tasks = LoadManager::Load<std::vector<std::shared_ptr<AutomationTask>>>("events.yml");
+    else
+        tasks = {};
+    std::vector<AndroidEvent> ret;
 
     ScriptManager sm;
 
+    FixedRate fr(60);
     sm.Adds(ScriptManager::Scan());
-    sm.Initialize();*/
-    bool running = true;
-
-    Mio::Application app("Mio Framework", "");
+    sm.Initialize();
+    std::atomic<bool> Packing = false;
+    auto pack = [&]() {
+        Packing = true;
+        Resource.Pack();
+        Packing = false;
+    };
+    std::thread packingThread;
+    Application app("Mio Framework", "");
     app.Initialize();
-    auto manifest = Mio::GUIManifest::Create("Main", (ResourcePath / "Scenes").string());
+    auto manifest = ResourceManager::LoadManifest((ResourcePath / "Scenes/Main").string());
     app.AddManifest(manifest);
+    auto window = manifest->GetUI<Window>("Main");
+    auto DevicesBox = manifest->GetUI<ListBox>("Devices");
+    auto scriptsList = manifest->GetUI<ListBox>("Scripts");
+    auto window2 = manifest->GetUI<Window>("InputNameWindow");
+    auto window3 = manifest->GetUI<Window>("WarningWindow");
+    auto iptName = manifest->GetUI<InputText>("InputName");
+    auto RecoringList = manifest->GetUI<Mio::ListBox>("RecordingList");
+    //auto btn1 = Button::Create({"刷新脚本列表"});
+    auto WarningText = manifest->GetUI<Text>("Text2");
+    auto search = manifest->GetUI<InputText>("SearchInputText");
+    auto runningList = manifest->GetUI<ListBox>("RunningList");
+    auto console = manifest->GetUI<Console>("ConsoleLog");
+
+    for (auto&task: tasks) {
+        for (auto&it: task->Replays)
+            RecoringList->GetData().items.push_back(it.first);
+    }
+
+    std::vector<std::string> scripts;
+    Event::Modify("SearchScripts", [&] {
+        for (auto&it: scripts) {
+            scriptsList->GetData().items.clear();
+            if (it.find(search->GetValue()) != std::string::npos)
+                scriptsList->GetData().items.push_back(it);
+        }
+    });
+    Event::Modify("BtnRefreshScripts", [&]() {
+        console->AddLog({"刷新脚本列表", Console::LogData::LogInfo});
+        scriptsList->GetData().items.clear();
+        scripts.clear();
+        for (auto&it: ScriptManager::Scan()) {
+            scriptsList->GetData().items.push_back(it);
+            scripts.push_back(it);
+        }
+    });
+    Event::Modify("BtnConfirm", [&]() {
+        RecoringList->GetData().items.push_back(iptName->GetValue());
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item != tasks.end()) {
+            (*item)->Replays[iptName->GetValue()] = ret;
+        }
+        window2->SetActive(false);
+    });
+    Event::Modify("BtnCancel", [&]() {
+        window2->SetActive(false);
+    });
+    Event::Modify("BtnConfirm1", [&]() {
+        window3->SetActive(false);
+    });
+    Event::Modify("BtnCancel1", [&]() {
+        window3->SetActive(false);
+    });
+    Event::Modify("BtnGetDevices", [&]() {
+        devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
+        DevicesBox->GetData().items = devices;
+    });
+    std::thread RecoringThread;
+    Event::Modify("BtnRecord", [&]() {
+        auto task = AutomationTask::Create();
+        if (DevicesBox->GetData().items.empty()) {
+            window3->SetActive(true);
+            WarningText->GetData().text = "暂无可用设备";
+            console->AddLog({"目前没有可用设备", Console::LogData::LogWarning});
+            return;
+        }
+        *task->Device = DevicesBox->GetSelectedItem();
+        task->state = AutomationTask::State::Recording;
+        task->RecordingThread = std::thread([task,adbc,console]() {
+            console->AddLog({"开始录制行为", Console::LogData::LogInfo});
+            adbc->setID(*task->Device);
+            adbc->startRecordingAct();
+        });
+        task->RecordingThread.detach();
+        tasks.push_back(task);
+    });
+    Event::Modify("BtnStopRecord", [&]() {
+        if (DevicesBox->GetData().items.empty()) {
+            window3->SetActive(true);
+            WarningText->GetData().text = "暂无可用设备";
+            console->AddLog({"目前没有可用设备", Console::LogData::LogWarning});
+            return;
+        }
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item != tasks.end()) {
+            window2->SetActive(true);
+            console->AddLog({*item->get()->Device + ": 录制停止", Console::LogData::LogInfo});
+            adbc->setID(*item->get()->Device);
+            ret = adbc->stopRecordingAct();
+            item->get()->state = AutomationTask::State::Idle;
+        }
+    });
+    Event::Modify("BtnReplay", [&]() {
+        if (DevicesBox->GetData().items.empty()) {
+            window3->SetActive(true);
+            WarningText->GetData().text = "暂无可用设备";
+            console->AddLog({"目前没有可用设备", Console::LogData::LogWarning});
+            return;
+        }
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item != tasks.end()) {
+            *item->get()->RunningScript = RecoringList->GetSelectedItem();
+            console->AddLog({
+                *item->get()->Device + ":开始回放行为: " + *item->get()->RunningScript, Console::LogData::LogInfo
+            });
+
+            item->get()->ScriptThread = std::thread([item,adbc,console,RecoringList] {
+                adbc->setID(*item->get()->Device);
+                item->get()->state = AutomationTask::State::Updating;
+                if (item->get()->Replays.contains(*item->get()->RunningScript)) {
+                    std::string name = *item->get()->RunningScript;
+                    while (item->get()->state == AutomationTask::State::Updating) {
+                        for (int i = 0; i < item->get()->Replays[name].size(); i++) {
+                            adbc->ReplayEvents({item->get()->Replays[name][i]});
+                            if (i == item->get()->Replays.size() - 1) {
+                                console->AddLog({
+                                    *item->get()->Device + ":回放完成: " + *item->get()->RunningScript,
+                                    Console::LogData::LogInfo
+                                });
+                                item->get()->state = AutomationTask::State::Idle;
+                            }
+                        }
+                    }
+                }
+                item->get()->state = AutomationTask::State::Idle;
+            });
+            item->get()->ScriptThread.detach();
+        }
+    });
+    Event::Modify("BtnStopReplay", [&] {
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item->get() != nullptr) {
+            console->AddLog({
+                *item->get()->Device + ":停止回放: " + *item->get()->RunningScript, Console::LogData::LogInfo
+            });
+            item->get()->state = AutomationTask::State::Idle;
+        }
+    });
+    Event::Modify("BtnRun", [&] {
+        if (DevicesBox->GetData().items.empty()) {
+            window3->SetActive(true);
+            WarningText->GetData().text = "暂无可用设备";
+            return;
+        }
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item != tasks.end()) {
+            *item->get()->RunningScript = RC::Utils::File::FileName(scriptsList->GetSelectedItem());
+            console->AddLog({
+                *item->get()->Device + ":开始运行脚本: " + *item->get()->RunningScript, Console::LogData::LogInfo
+            });
+            item->get()->running = true;
+            item->get()->ScriptThread = std::thread([item,adbc,&sm,scriptsList,&fr] {
+                auto script = sm.GetScript(RC::Utils::File::FileName(scriptsList->GetSelectedItem()));
+
+                adbc->setID(*item->get()->Device);
+                Task(script, item->get()->running, fr, adbc, item->get()->state);
+            });
+
+            item->get()->ScriptThread.detach();
+        }
+    });
+    Event::Modify("BtnStopRun", [&] {
+        if (DevicesBox->GetData().items.empty()) {
+            window3->SetActive(true);
+            WarningText->GetData().text = "暂无可用设备";
+            return;
+        }
+        auto item = std::ranges::find_if(
+            tasks, [&](const std::shared_ptr<AutomationTask>&it) {
+                return *it->Device == DevicesBox->GetSelectedItem();
+            });
+        if (item != tasks.end()) {
+            console->AddLog({
+                *item->get()->Device + ":停止运行脚本: " + *item->get()->RunningScript, Console::LogData::LogInfo
+            });
+            item->get()->running = false;
+        }
+    });
+
     ImVec4 clear = {0.f, 0.f, 0.f, 1.f};
-    Mio::ResourceManager::SaveManifest(manifest);
+
     while (!app.ShouldClose()) {
+        runningList->GetData().items.clear();
+        for (const auto&task: tasks) {
+            runningList->GetData().items.emplace_back(
+                *task.get()->Device + ": " + *task.get()->RunningScript + ": " + AutomationTask::stateToString(
+                    task.get()->state));
+        }
         app.SetClearColor(clear);
         app.Update();
     }
-    running = false;
+
+    DevicesBox->GetData().items.clear();
+    RecoringList->GetData().items.clear();
+    scriptsList->GetData().items.clear();
+    runningList->GetData().items.clear();
+    LoadManager::Save(tasks, "events.yml");
     app.Shutdown();
-    Mio::Resource.Pack();
+    ResourceManager::SaveManifest(manifest);
     return 0;
 }

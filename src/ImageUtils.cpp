@@ -19,6 +19,10 @@ cv::Mat ImageUtils::Binary(cv::Mat src) {
     return dst;
 }
 
+cv::Mat ImageUtils::Image(const std::string& srcPath) {
+    return cv::imread(srcPath);
+}
+
 ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std::string&outputPath) {
     ADBC::Point point;
     point.x = -1;

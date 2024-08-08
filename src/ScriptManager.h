@@ -57,7 +57,7 @@ public:
     template<typename... Args>
     void Invokes(ScriptFunctions funcs, Args&&... args);
 
-    static std::vector<std::string> Scan(std::string scriptsRoot = "scripts");
+    static std::vector<std::string> Scan(std::string scriptsRoot = RESOURCING("scripts"));
 
     ScriptFunctions GetFuncs(std::string funcName) const;
 

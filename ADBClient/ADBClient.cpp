@@ -35,8 +35,15 @@ namespace ADBC {
         AxisResolution = getAxisResolution();
     }
 
+    ADBClient::ADBClient(const std::string&adbPath) : adbPath(adbPath) {
+    }
+
     std::shared_ptr<ADBClient> ADBClient::Create(const std::string&adbPath, const std::string&serial) {
         return std::make_shared<ADBClient>(adbPath, serial);
+    }
+
+    std::shared_ptr<ADBClient> ADBClient::Create(const std::string&adbPath) {
+        return std::make_shared<ADBClient>(adbPath);
     }
 
     std::vector<std::string> ADBClient::Devices(std::string adbPath) {
@@ -380,6 +387,7 @@ namespace ADBC {
     void ADBClient::setID(const std::string&serial) {
         this->serial = serial;
         resolution = getResolution();
+        AxisResolution = getAxisResolution();
     }
 
     void ADBClient::loadEvents(const std::string&name, const std::vector<AndroidEvent>&event) {

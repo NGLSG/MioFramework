@@ -16,11 +16,10 @@ public:
 
     static cv::Mat Binary(cv::Mat src);
 
+    static cv::Mat Image(const std::string&srcPath);
+
     static ADBC::Point Find(cv::Mat&src, const cv::Mat&templateImage,
                             const std::string&outputPath = "assets/tmp.png");
-
-    static uint32_t LoadTexture(const char* filename);
-
 
     static ADBC::Point Find(const std::string&srcPath, const std::string&templatePath,
                             const std::string&outputPath = "assets/tmp.png");

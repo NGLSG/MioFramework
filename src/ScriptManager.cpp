@@ -1,7 +1,3 @@
-//
-// Created by 92703 on 2024/7/26.
-//
-
 #include "ScriptManager.h"
 
 sol::protected_function ScriptFunctions::operator[](int index) {

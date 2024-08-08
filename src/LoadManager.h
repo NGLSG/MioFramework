@@ -62,6 +62,24 @@ namespace YAML {
             return true;
         }
     };
+
+    template<>
+    struct convert<std::map<std::string, std::vector<ADBC::AndroidEvent>>> {
+        static Node encode(const std::map<std::string, std::vector<ADBC::AndroidEvent>>&events) {
+            Node node;
+            for (const auto&event: events) {
+                node[event.first] = event.second;
+            }
+            return node;
+        }
+
+        static bool decode(const Node&node, std::map<std::string, std::vector<ADBC::AndroidEvent>>&events) {
+            for (const auto&event: node) {
+                events[event.first.as<std::string>()] = event.second.as<std::vector<ADBC::AndroidEvent>>();
+            }
+            return true;
+        }
+    };
 }
 
 class LoadManager {

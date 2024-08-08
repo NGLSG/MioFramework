@@ -99,7 +99,11 @@ namespace ADBC {
     public :
         explicit ADBClient(const std::string&adbPath, const std::string&serial);
 
+        ADBClient(const std::string&adbPath);
+
         static std::shared_ptr<ADBClient> Create(const std::string&adbPath, const std::string&serial);
+
+        static std::shared_ptr<ADBClient> Create(const std::string&adbPath);
 
         static std::vector<std::string> Devices(std::string adbPath);
 

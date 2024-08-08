@@ -220,6 +220,10 @@ void Script::binding() {
     IU.set_function("PrintScreen", [](std::shared_ptr<ADBC::ADBClient> adbc) {
         return ImageUtils::PrintScreen(adbc);
     });
+    IU.set_function("Image", [](std::string path) {
+        return ImageUtils::Image(path);
+    });
+    lua.set("ImageUtils", IU);
     lua.new_usertype<ADBC::Point>("Point",
                                   sol::constructors<ADBC::Point(float, float)>(),
                                   "x", &ADBC::Point::x,
