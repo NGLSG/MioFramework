@@ -447,9 +447,10 @@ int main(int argc, char** argv) {
     RecoringList->GetData().items.clear();
     scriptsList->GetData().items.clear();
     runningList->GetData().items.clear();
+    ResourceManager::SaveManifest(manifest);
     LoadManager::Save(tasks, "events.yml");
     //RC::Utils::Directory::Remove("Resources");
     app.Shutdown();
-    ResourceManager::SaveManifest(manifest);
+
     return 0;
 }
