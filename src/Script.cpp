@@ -267,11 +267,12 @@ void Script::binding() {
                                       "AxisYToScreen", &ADBC::ADBClient::AxisYToScreen,
                                       "loadEvents", &ADBC::ADBClient::loadEvents,
                                       "ReplayEvents", sol::overload(
-                                          [](ADBC::ADBClient&client, std::vector<ADBC::AndroidEvent> events) {
-                                              client.ReplayEvents(events);
+                                          [](ADBC::ADBClient&client, std::vector<ADBC::AndroidEvent> events,
+                                             sol::optional<bool> control) {
+                                              client.ReplayEvents(events, control.value_or(true));
                                           },
-                                          [](ADBC::ADBClient&client, std::string name) {
-                                              client.ReplayEvents(name);
+                                          [](ADBC::ADBClient&client, std::string name, sol::optional<bool> control) {
+                                              client.ReplayEvents(name, control.value_or(true));
                                           }
                                       )
     );

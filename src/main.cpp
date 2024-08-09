@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
     }
     if (!RC::Utils::File::Exists(RC::Utils::File::PlatformPath(std::string("bin/platform-tools/adb") + suffix))) {
         std::cout << "Downloading adb" << std::endl;
-        EURL::eurl::Download(ADB_LINK, RC::Utils::File::PlatformPath("bin.zip").c_str());
+        eurl::Download(ADB_LINK, RC::Utils::File::PlatformPath("bin.zip").c_str());
         RC::Compression::Extract("bin.zip", "bin");
     }
     auto devices = ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
@@ -200,10 +200,8 @@ int main(int argc, char** argv) {
     else
         tasks = {};
     std::vector<AndroidEvent> ret;
-    //Resource.UnpackAll();
+
     ScriptManager sm;
-
-
     FixedRate fr(60);
     sm.Adds(ScriptManager::Scan());
     sm.Initialize();
@@ -269,6 +267,7 @@ int main(int argc, char** argv) {
     Event::Modify("BtnGetDevices", [&]() {
         devices = ADBC::ADBClient::Devices(RC::Utils::File::PlatformPath("bin/platform-tools/adb"));
         DevicesBox->GetData().items = devices;
+        console->AddLog({"刷新设备列表", Console::LogData::LogInfo});
     });
     Event::Modify("BtnRecord", [&]() {
         if (DevicesBox->GetData().items.empty()) {
@@ -340,21 +339,16 @@ int main(int argc, char** argv) {
                 item->get()->state = AutomationTask::State::Updating;
                 if (item->get()->Replays.contains(*item->get()->RunningScript)) {
                     std::string name = *item->get()->RunningScript;
+                    item->get()->running = true;
                     while (item->get()->state == AutomationTask::State::Updating) {
-                        for (int i = 0; i < item->get()->Replays[name].size(); i++) {
-                            adbc->ReplayEvents({item->get()->Replays[name][i]});
-                            if (i == item->get()->Replays.size() - 1) {
-                                console->AddLog({
-                                    *item->get()->Device + ":回放完成: " + *item->get()->RunningScript,
-                                    Console::LogData::LogInfo
-                                });
-                                item->get()->state = AutomationTask::State::Idle;
-                                break;
-                            }
-                        }
+                        adbc->ReplayEvents(item->get()->Replays[name], item->get()->running);
+                        console->AddLog({
+                            *item->get()->Device + ":回放完成: " + *item->get()->RunningScript,
+                            Console::LogData::LogInfo
+                        });
+                        item->get()->state = AutomationTask::State::Idle;
                     }
                 }
-                item->get()->state = AutomationTask::State::Idle;
             });
             item->get()->ScriptThread.detach();
         }
@@ -369,6 +363,7 @@ int main(int argc, char** argv) {
                 *item->get()->Device + ":停止回放: " + *item->get()->RunningScript, Console::LogData::LogInfo
             });
             item->get()->state = AutomationTask::State::Idle;
+            item->get()->running = false;
         }
     });
     Event::Modify("BtnRun", [&] {
@@ -381,21 +376,25 @@ int main(int argc, char** argv) {
             tasks, [&](const std::shared_ptr<AutomationTask>&it) {
                 return *it->Device == DevicesBox->GetSelectedItem();
             });
-        if (item != tasks.end()) {
-            *item->get()->RunningScript = RC::Utils::File::FileName(scriptsList->GetSelectedItem());
-            console->AddLog({
-                *item->get()->Device + ":开始运行脚本: " + *item->get()->RunningScript, Console::LogData::LogInfo
-            });
-            item->get()->running = true;
-            item->get()->ScriptThread = std::thread([item,adbc,&sm,scriptsList,&fr] {
-                auto script = sm.GetScript(RC::Utils::File::FileName(scriptsList->GetSelectedItem()));
-
-                adbc->setID(*item->get()->Device);
-                Task(script, item->get()->running, fr, adbc, item->get()->state);
-            });
-
-            item->get()->ScriptThread.detach();
+        if (item == tasks.end()) {
+            auto task = AutomationTask::Create();
+            *task.get()->Device = DevicesBox->GetSelectedItem();
+            tasks.emplace_back(task);
+            item = tasks.end() - 1;
         }
+        *item->get()->RunningScript = RC::Utils::File::FileName(scriptsList->GetSelectedItem());
+        console->AddLog({
+            *item->get()->Device + ":开始运行脚本: " + *item->get()->RunningScript, Console::LogData::LogInfo
+        });
+        item->get()->running = true;
+        item->get()->ScriptThread = std::thread([item,adbc,&sm,scriptsList,&fr] {
+            auto script = sm.GetScript(RC::Utils::File::FileName(scriptsList->GetSelectedItem()));
+
+            adbc->setID(*item->get()->Device);
+            Task(script, item->get()->running, fr, adbc, item->get()->state);
+        });
+
+        item->get()->ScriptThread.detach();
     });
     Event::Modify("BtnStopRun", [&] {
         if (DevicesBox->GetData().items.empty()) {
@@ -415,7 +414,6 @@ int main(int argc, char** argv) {
         }
     });
 
-
     ImVec4 clear = {0.f, 0.f, 0.f, 1.f};
 
     while (!app.ShouldClose()) {
@@ -429,28 +427,7 @@ int main(int argc, char** argv) {
         app.Update();
     }
 
-    std::atomic<bool> Packing = true;
-    auto pack = [&]() {
-        Packing = true;
-        Resource.Pack();
-        Packing = false;
-    };
-    std::thread packingThread;
-    packingThread = std::thread([&] {
-        pack();
-    });
-    packingThread.detach();
-    while (Packing) {
-        RC::Utils::sleep(500);
-    }
-    DevicesBox->GetData().items.clear();
-    RecoringList->GetData().items.clear();
-    scriptsList->GetData().items.clear();
-    runningList->GetData().items.clear();
-    ResourceManager::SaveManifest(manifest);
     LoadManager::Save(tasks, "events.yml");
-    //RC::Utils::Directory::Remove("Resources");
     app.Shutdown();
-
     return 0;
 }

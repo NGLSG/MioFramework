@@ -147,9 +147,9 @@ namespace ADBC {
 
         std::vector<AndroidEvent> stopRecordingAct();
 
-        void ReplayEvents(const std::vector<AndroidEvent>&events) const;
+        void ReplayEvents(const std::vector<AndroidEvent>&events, bool control = true) const;
 
-        void ReplayEvents(const std::string&name);
+        void ReplayEvents(const std::string&name, bool control = true);
 
         bool checkPackage(const std::string&packageName) const;
 

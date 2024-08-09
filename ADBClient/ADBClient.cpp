@@ -233,8 +233,8 @@ namespace ADBC {
         return recordedEvents;
     }
 
-    void ADBClient::ReplayEvents(const std::vector<AndroidEvent>&events) const {
-        for (int i = 0; i < events.size(); i++) {
+    void ADBClient::ReplayEvents(const std::vector<AndroidEvent>&events, bool control) const {
+        for (int i = 0; i < events.size() && control; i++) {
             AndroidEvent event = events[i];
 
             if (event.type == "swipe") {
@@ -272,8 +272,8 @@ namespace ADBC {
         }
     }
 
-    void ADBClient::ReplayEvents(const std::string&name) {
-        ReplayEvents(getEvents(name));
+    void ADBClient::ReplayEvents(const std::string&name, bool control) {
+        ReplayEvents(getEvents(name), control);
     }
 
     void ADBClient::recordAct() {
