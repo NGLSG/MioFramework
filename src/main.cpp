@@ -56,49 +56,6 @@ size_t streamJsonEg(void* contents, size_t size, size_t nmemb, void* userp) {
     return newLength;
 }
 
-class ThreadWrapper {
-public:
-    template<typename Func, typename... Args>
-    ThreadWrapper(Func&&func, Args&&... args)
-        : stopFlag(false),
-          task([&]() {
-              func(std::forward<Args>(args)...);
-          }),
-          workerThread() {
-    }
-
-    ~ThreadWrapper() {
-        stop();
-    }
-
-    void start() {
-        if (!workerThread.joinable()) {
-            workerThread = std::thread([this]() {
-                while (!stopFlag.load()) {
-                    task();
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
-                }
-                std::cout << "Thread is stopping" << std::endl;
-            });
-        }
-        else {
-            std::cerr << "Thread is already running" << std::endl;
-        }
-    }
-
-    void stop() {
-        stopFlag.store(true);
-        if (workerThread.joinable()) {
-            workerThread.join();
-        }
-    }
-
-private:
-    std::atomic<bool> stopFlag;
-    std::function<void()> task;
-    std::thread workerThread;
-};
-
 struct FixedRate {
     const std::chrono::microseconds interval;
     const float frequency;
