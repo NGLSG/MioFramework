@@ -140,7 +140,7 @@ struct YAML::convert<std::shared_ptr<AutomationTask>> {
 };
 
 int main(int argc, char** argv) {
-    Resource.UnpackAll();
+    //Resource.UnpackAll();
     if (!RC::Utils::Directory::Exists("assets")) {
         RC::Utils::Directory::Create("assets");
     }
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     auto window2 = manifest->GetUI<Window>("InputNameWindow");
     auto window3 = manifest->GetUI<Window>("WarningWindow");
     auto iptName = manifest->GetUI<InputText>("InputName");
-    auto RecoringList = manifest->GetUI<Mio::ListBox>("RecordingList");
+    auto RecordingList = manifest->GetUI<Mio::ListBox>("RecordingList");
     //auto btn1 = Button::Create({"刷新脚本列表"});
     auto WarningText = manifest->GetUI<Text>("Text2");
     auto search = manifest->GetUI<InputText>("SearchInputText");
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
     auto console = manifest->GetUI<Console>("ConsoleLog");
     for (auto&task: tasks) {
         for (auto&it: task->Replays)
-            RecoringList->GetData().items.push_back(it.first);
+            RecordingList->GetData().items.push_back(it.first);
     }
     std::vector<std::string> scripts;
     Event::Modify("SearchScripts", [&] {
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
         }
     });
     Event::Modify("BtnConfirm", [&]() {
-        RecoringList->GetData().items.push_back(iptName->GetValue());
+        RecordingList->GetData().items.push_back(iptName->GetValue());
         auto item = std::ranges::find_if(
             tasks, [&](const std::shared_ptr<AutomationTask>&it) {
                 return *it->Device == DevicesBox->GetSelectedItem();
@@ -286,12 +286,12 @@ int main(int argc, char** argv) {
                 return *it->Device == DevicesBox->GetSelectedItem();
             });
         if (item != tasks.end()) {
-            *item->get()->RunningScript = RecoringList->GetSelectedItem();
+            *item->get()->RunningScript = RecordingList->GetSelectedItem();
             console->AddLog({
                 *item->get()->Device + ":开始回放行为: " + *item->get()->RunningScript, Console::LogData::LogInfo
             });
 
-            item->get()->ScriptThread = std::thread([item,adbc,console,RecoringList] {
+            item->get()->ScriptThread = std::thread([item,adbc,console,RecordingList] {
                 adbc->setID(*item->get()->Device);
                 item->get()->state = AutomationTask::State::Updating;
                 if (item->get()->Replays.contains(*item->get()->RunningScript)) {

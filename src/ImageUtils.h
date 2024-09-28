@@ -23,6 +23,10 @@ public:
 
     static ADBC::Point Find(const std::string&srcPath, const std::string&templatePath,
                             const std::string&outputPath = "assets/tmp.png");
+
+    static ADBC::Point Match(cv::Mat&src, const cv::Mat&templateImage, const std::string&outputPath = "assets/tmp.png");
+
+    static ADBC::Point Match(const std::string&srcPath, const std::string&templatePath, const std::string&outputPath = "assets/tmp.png");
 };
 
 

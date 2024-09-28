@@ -220,6 +220,15 @@ void Script::binding() {
     IU.set_function("PrintScreen", [](std::shared_ptr<ADBC::ADBClient> adbc) {
         return ImageUtils::PrintScreen(adbc);
     });
+
+    IU.set_function("MatchFromStr", [](const std::string&srcPath, const std::string&templatePath,
+                                       sol::optional<std::string> outputPath) {
+        return ImageUtils::Match(srcPath, templatePath, outputPath.value_or("assets/tmp.png"));
+    });
+    IU.set_function("MatchFromMat", [](cv::Mat&src, const cv::Mat&templateImage,
+                                       sol::optional<std::string> outputPath) {
+        return ImageUtils::Match(src, templateImage, outputPath.value_or("assets/tmp.png"));
+    });
     IU.set_function("Image", [](std::string path) {
         return ImageUtils::Image(path);
     });
