@@ -3,10 +3,9 @@ project(MioFramework)
 
 
 set(CMAKE_CXX_STANDARD 20)
-
+add_definitions(-w)
 find_package(CURL REQUIRED)
 find_package(Lua REQUIRED)
-find_package(OpenCV CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 
 
