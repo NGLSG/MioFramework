@@ -140,7 +140,7 @@ struct YAML::convert<std::shared_ptr<AutomationTask>> {
 };
 
 int main(int argc, char** argv) {
-    //Resource.UnpackAll();
+    Resource.UnpackAll();
     if (!RC::Utils::Directory::Exists("assets")) {
         RC::Utils::Directory::Create("assets");
     }
@@ -386,5 +386,7 @@ int main(int argc, char** argv) {
 
     LoadManager::Save(tasks, "events.yml");
     app.Shutdown();
+    if (RC::Utils::File::Exists("Resources"))
+        RC::Utils::Directory::Remove("Resources");
     return 0;
 }

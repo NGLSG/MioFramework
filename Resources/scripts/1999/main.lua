@@ -1,7 +1,7 @@
 device = nil
-img1 = ImageUtils.Image("Resources/assets/img/1999/1.jpg")
-img2 = ImageUtils.Image("Resources/assets/img/1999/2.jpg")
-img3 = ImageUtils.Image("Resources/assets/img/1999/3.jpg")
+img1 = nil
+img2 = nil
+img3 = nil
 function Awake()
 
 end
@@ -11,6 +11,9 @@ function Start(client)
         print("client is nil")
         return ;
     else
+        img1 = ImageUtils.Image("Resources/assets/img/1999/1.jpg")
+        img2 = ImageUtils.Image("Resources/assets/img/1999/2.jpg")
+        img3 = ImageUtils.Image("Resources/assets/img/1999/3.jpg")
         device = client
         point = Point:new(-1, -1)
         while point.x == -1 and point.y == -1 do
