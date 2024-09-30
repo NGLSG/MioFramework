@@ -384,6 +384,7 @@ int main(int argc, char** argv) {
     }
 
     LoadManager::Save(tasks, "events.yml");
+    //Resource.Pack();
     app.Shutdown();
     if (RC::Utils::File::Exists("Resources"))
         RC::Utils::Directory::Remove("Resources");

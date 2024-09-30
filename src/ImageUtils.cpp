@@ -23,7 +23,7 @@ cv::Mat ImageUtils::Image(const std::string&srcPath) {
     return cv::imread(srcPath);
 }
 
-ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std::string&outputPath) {
+ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage,float thresh) {
     if (src.empty() || templateImage.empty()) {
         std::cerr << "Could not open or find the image" << std::endl;
         return {-1, -1};
@@ -32,7 +32,7 @@ ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std
 
     cv::Mat result;
     cv::matchTemplate(src, templateImage, result, cv::TM_CCOEFF_NORMED);
-    cv::threshold(result, result, 0.9, 1.0, cv::THRESH_TOZERO);
+    cv::threshold(result, result, thresh, 1.0, cv::THRESH_TOZERO);
 
     // 找到非零点
     std::vector<cv::Point> cvPoints;
@@ -43,23 +43,19 @@ ADBC::Point ImageUtils::Find(cv::Mat&src, const cv::Mat&templateImage, const std
         point.x = cvPoint.x + templateImage.cols / 2; // 计算矩形中心的x坐标
         point.y = cvPoint.y + templateImage.rows / 2; // 计算矩形中心的y坐标
 
-        cv::rectangle(src, cv::Point(cvPoint.x, cvPoint.y),
+        /*cv::rectangle(src, cv::Point(cvPoint.x, cvPoint.y),
                       cv::Point(cvPoint.x + templateImage.cols, cvPoint.y + templateImage.rows),
-                      cv::Scalar(0, 255, 0), 2);
+                      cv::Scalar(0, 255, 0), 2);*/
     }
 
-    if (!outputPath.empty()) {
-        cv::imwrite(outputPath, src);
-    }
 
     return point;
 }
 
-ADBC::Point ImageUtils::Find(const std::string&srcPath, const std::string&templatePath,
-                             const std::string&outputPath) {
+ADBC::Point ImageUtils::Find(const std::string&srcPath, const std::string&templatePath, float thresh) {
     cv::Mat src = cv::imread(srcPath);
     cv::Mat templateImage = cv::imread(templatePath);
-    return Find(src, templateImage, outputPath);
+    return Find(src, templateImage, thresh);
 }
 
 ADBC::Point ImageUtils::Match(cv::Mat&src, const cv::Mat&templateImage, const std::string&outputPath) {
@@ -100,8 +96,8 @@ ADBC::Point ImageUtils::Match(cv::Mat&src, const cv::Mat&templateImage, const st
     return point;
 }
 
-ADBC::Point ImageUtils::Match(const std::string& srcPath, const std::string& templatePath,
-    const std::string& outputPath) {
+ADBC::Point ImageUtils::Match(const std::string&srcPath, const std::string&templatePath,
+                              const std::string&outputPath) {
     cv::Mat src = cv::imread(srcPath);
     cv::Mat templateImage = cv::imread(templatePath);
     return Match(src, templateImage, outputPath);

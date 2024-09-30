@@ -210,12 +210,12 @@ void Script::binding() {
         return ImageUtils::Binary(src);
     });
     IU.set_function("FindFromStr", [](const std::string&srcPath, const std::string&templatePath,
-                                      sol::optional<std::string> outputPath) {
-        return ImageUtils::Find(srcPath, templatePath, outputPath.value_or("assets/tmp.png"));
+                                      sol::optional<float> thresh) {
+        return ImageUtils::Find(srcPath, templatePath, thresh.value_or(0.5f));
     });
     IU.set_function("FindFromMat", [](cv::Mat&src, const cv::Mat&templateImage,
-                                      sol::optional<std::string> outputPath) {
-        return ImageUtils::Find(src, templateImage, outputPath.value_or("assets/tmp.png"));
+                                      sol::optional<float> thresh) {
+        return ImageUtils::Find(src, templateImage, thresh.value_or(0.5f));
     });
     IU.set_function("PrintScreen", [](std::shared_ptr<ADBC::ADBClient> adbc) {
         return ImageUtils::PrintScreen(adbc);

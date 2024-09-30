@@ -18,11 +18,9 @@ public:
 
     static cv::Mat Image(const std::string&srcPath);
 
-    static ADBC::Point Find(cv::Mat&src, const cv::Mat&templateImage,
-                            const std::string&outputPath = "assets/tmp.png");
+    static ADBC::Point Find(cv::Mat&src, const cv::Mat&templateImage,float thresh = 0.5f);
 
-    static ADBC::Point Find(const std::string&srcPath, const std::string&templatePath,
-                            const std::string&outputPath = "assets/tmp.png");
+    static ADBC::Point Find(const std::string&srcPath, const std::string&templatePath,float thresh = 0.5f);
 
     static ADBC::Point Match(cv::Mat&src, const cv::Mat&templateImage, const std::string&outputPath = "assets/tmp.png");
 

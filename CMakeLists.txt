@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.22)
 project(MioFramework)
 
 
@@ -7,7 +7,6 @@ add_definitions(-w)
 find_package(CURL REQUIRED)
 find_package(Lua REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
-
 
 add_subdirectory(ADBClient)
 add_subdirectory(MUI)
