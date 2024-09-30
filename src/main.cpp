@@ -372,7 +372,6 @@ int main(int argc, char** argv) {
     });
 
     ImVec4 clear = {0.f, 0.f, 0.f, 1.f};
-
     while (!app.ShouldClose()) {
         runningList->GetData().items.clear();
         for (const auto&task: tasks) {
